@@ -16,7 +16,7 @@
 
 package shapeless
 
-import scala.collection.{ GenTraversable, GenTraversableLike }
+import scala.collection.{ GenTraversable, GenTraversableLike, GenSeqLike }
 import scala.collection.generic.{ CanBuildFrom, IsTraversableLike }
 
 /**
@@ -36,7 +36,7 @@ final class Sized[+Repr, L <: Nat](val unsized : Repr) extends AnyVal
  * 
  * @author Miles Sabin
  */
-class SizedOps[A, Repr, L <: Nat](r : GenTraversableLike[A, Repr]) { outer =>
+class SizedOps[A, Repr, L <: Nat](r : GenSeqLike[A, Repr]) { outer =>
   import nat._
   import ops.nat._
   import LT._
@@ -53,7 +53,9 @@ class SizedOps[A, Repr, L <: Nat](r : GenTraversableLike[A, Repr]) { outer =>
    * element.
    */
   def tail(implicit pred : Pred[L]) = wrap[Repr, pred.Out](r.tail)
-  
+
+  def safeGet(m : Nat)(implicit diff : Diff[L, Succ[m.N]], ev : ToInt[m.N]) = r(toInt[m.N])
+
   /**
    * Returns the first ''m'' elements of this collection. An explicit type argument must be provided. Available only if
    * there is evidence that this collection has at least ''m'' elements. The resulting collection will be statically
@@ -141,7 +143,7 @@ trait LowPrioritySized {
 object Sized extends LowPrioritySized {
   implicit def sizedOps[Repr, L <: Nat](s : Sized[Repr, L])
     (implicit itl: IsTraversableLike[Repr]): SizedOps[itl.A, Repr, L] =
-      new SizedOps[itl.A, Repr, L](itl.conversion(s.unsized))
+      new SizedOps[itl.A, Repr, L](itl.conversion(s.unsized).asInstanceOf[GenSeqLike[itl.A, Repr]])
   
   def apply[CC[_]] = new SizedBuilder[CC]
   
